@@ -20,7 +20,6 @@
 
 char string_buffer[64];
 
-
 // USB USART -------------------------------------------------------------------
 
 #include "usart3.h"
@@ -41,6 +40,10 @@ char string_buffer[64];
 
 //#include "WIFI.h"
 
+// BUZZER --------------------------------------------------------------
+
+#include "BUZZER.h"
+
 
 void initialize() {
 
@@ -56,9 +59,20 @@ void initialize() {
   RELAY_init();
   USART3_sendString("RELAYS initialized!\n");
 
-  USART3_sendString(string_buffer);
+  BUZZER_init();
+  USART3_sendString("BUZZER initialized!\n");
 
   sei();
+}
+
+
+// ISR for BUZZER
+ISR(TCA0_OVF_vect)
+{
+  //USART3_sendString("ISR\n");
+  PORTB.OUTTGL |= PIN2_bm;
+  // clear interrupt overflow flag
+  TCA0.SINGLE.INTFLAGS = TCA_SINGLE_OVF_bm;
 }
 
 
@@ -74,37 +88,41 @@ int main(void)
 
     PORTD.OUTTGL |= PIN6_bm;
 
+    sprintf(string_buffer, "TCA0 CNT: %d\r\n", TCA0.SINGLE.CNT);
+    USART3_sendString(string_buffer);
+
 
     // WATER LEVEL TEST
 
     // Connect to Arduino D7 --> PA1
-    //int water_level = PEWLL_read();
-    //
-    // sprintf(string_buffer, "Water Level: %u\r\n", water_level);
-    // USART3_sendString(string_buffer);
+    int water_level = PEWLL_read();
+
+    sprintf(string_buffer, "Water Level: %u\r\n", water_level);
+    USART3_sendString(string_buffer);
 
 
     // DHT11 TEST ------------------------------------
 
-    sprintf(string_buffer, "%d!\r\n", count++);
-    USART3_sendString(string_buffer);
-
-
-
-    dht_status = DHT_get_status();
-    sprintf(string_buffer, "DHT_status: %u\r\n", dht_status);
-    USART3_sendString(string_buffer);
-
-    int8_t temperature = 0;
-    int8_t humidity = 0;
-
-    cli();
-
-    dht_status = DHT11_read(&temperature, &humidity);
-    sprintf(string_buffer, "temp: %u; humidity: %u; DHT_status: %u\r\n", temperature, humidity, dht_status);
-    USART3_sendString(string_buffer);
-
-    sei();
+    // sprintf(string_buffer, "%d!\r\n", count++);
+    // USART3_sendString(string_buffer);
+    //
+    // int8_t temperature = 0;
+    // int8_t humidity = 0;
+    //
+    // cli();
+    //
+    // dht_status = DHT11_read(&temperature, &humidity);
+    // sprintf(string_buffer, "temp: %u; humidity: %u; DHT_status: %u\r\n", temperature, humidity, dht_status);
+    // USART3_sendString(string_buffer);
+    //
+    // sei();
+    //
+    // if (temperature >= 24 || humidity >= 50) {
+    //   PORTD.OUTSET |= PIN6_bm;
+    // }
+    // else {
+    //   PORTD.OUTCLR |= PIN6_bm;
+    // }
 
     //  ----------------------------------------------
 
@@ -150,6 +168,33 @@ int main(void)
     // ------------------------------------------
 
     // WIFI TEST --------------------------------
+
+    // ------------------------------------------
+
+    // BUZZER TEST --------------------------------
+
+    // init
+    // set D6 as output
+    // set D6 low
+    // enable TCA0 interrupt
+    // set compare value to 0
+
+    // ISR
+    // if TCA0 is triggered --> toggle pin D5
+
+    if (!PEWLL_in_water())
+    {
+      //TCA0.SINGLE.PER = 888;
+      BUZZER_on();
+    }
+    else
+    {
+      BUZZER_off();
+    }
+
+
+
+
 
 
 
