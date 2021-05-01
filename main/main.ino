@@ -35,6 +35,8 @@ char string_buffer[64];
 // 4 Relay Shield --------------------------------------------------------------
 
 #include "RELAY.h"
+#define FAN 4
+#define LAMP 1
 
 // WIFI --------------------------------------------------------------
 
@@ -62,6 +64,9 @@ void initialize() {
   BUZZER_init();
   USART3_sendString("BUZZER initialized!\n");
 
+  RELAY_low(LAMP);
+  RELAY_low(FAN);
+
   sei();
 }
 
@@ -85,7 +90,7 @@ int main(void)
 
   while (1)
   {
-
+    _delay_ms(2000);
     PORTD.OUTTGL |= PIN6_bm;
 
     sprintf(string_buffer, "TCA0 CNT: %d\r\n", TCA0.SINGLE.CNT);
@@ -94,7 +99,7 @@ int main(void)
 
     // WATER LEVEL TEST
 
-    // Connect to Arduino D7 --> PA1
+    // Connect to Arduino D6 --> PF4
     int water_level = PEWLL_read();
 
     sprintf(string_buffer, "Water Level: %u\r\n", water_level);
@@ -182,6 +187,8 @@ int main(void)
     // ISR
     // if TCA0 is triggered --> toggle pin D5
 
+
+    // WATER LEVEL notifier
     if (!PEWLL_in_water())
     {
       //TCA0.SINGLE.PER = 888;
@@ -192,12 +199,44 @@ int main(void)
       BUZZER_off();
     }
 
+    // Air circulation
+
+
+    int8_t temperature = 0;
+    int8_t humidity = 0;
+
+    cli();
+
+    dht_status = DHT11_read(&temperature, &humidity);
+    sprintf(string_buffer, "temp: %u; humidity: %u; DHT_status: %u\r\n", temperature, humidity, dht_status);
+    USART3_sendString(string_buffer);
+
+    sei();
+
+    // regulate fan and lights based on temperature and humidity
+    if (temperature >= 40) {
+      RELAY_high(LAMP); // OFF
+      RELAY_high(FAN);  // ON
+    }
+    else if (temperature >= 24 || humidity >= 50) {
+      RELAY_low(LAMP);  // ON
+      RELAY_high(FAN);  // ON
+    }
+    else {
+      RELAY_low(LAMP);  // ON
+      RELAY_low(FAN);   // OFF
+    }
+
+
+    // // fan
+    //
+    // RELAY_toggle(FAN);
+    //
+    // // light
+    //
+    // RELAY_toggle(LAMP);
 
 
 
-
-
-
-    _delay_ms(2000);
   }
 }
