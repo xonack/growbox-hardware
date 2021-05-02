@@ -23,6 +23,9 @@ uint32_t delayMS;
 
 void setup() {
   Serial.begin(9600);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
 
   dht.begin();
 
